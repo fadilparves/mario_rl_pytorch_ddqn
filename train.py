@@ -47,7 +47,7 @@ class GrayScaleObservation(gym.ObservationWrapper):
 
     def permute_orientation(self, observation):
         observation = np.transpose(observation, (2,0,1))
-        observation = torch.tensor(observation.copy(), dtype=torch.float)
+        observation = torch.tensor(observation.copy(), dtype=torch.float32)
         return observation
 
     def observation(self, observation):
@@ -121,9 +121,9 @@ class Mario:
         else:
             state = state.__array__()
             if self.use_cuda:
-                state = torch.tensor(state).cuda()
+                state = torch.tensor(state, dtype=torch.float32).cuda()
             else:
-                state = torch.tensor(state)
+                state = torch.tensor(state, dtype=torch.float32)
             state = state.unsqueeze(0)
             action_values = self.net(state, model="online")
             action_idx = torch.argmax(action_values, axis=1).item()
@@ -141,17 +141,17 @@ class Mario:
         next_state = next_state.__array__()
 
         if self.use_cuda:
-            state = torch.tensor(state).cuda()
-            next_state = torch.tensor(next_state).cuda()
-            action = torch.tensor([action]).cuda()
-            reward = torch.tensor([reward]).cuda()
-            done = torch.tensor([done]).cuda()
+            state = torch.tensor(state, dtype=torch.float32).cuda()
+            next_state = torch.tensor(next_state, dtype=torch.float32).cuda()
+            action = torch.tensor([action], dtype=torch.float32).cuda()
+            reward = torch.tensor([reward], dtype=torch.float32).cuda()
+            done = torch.tensor([done], dtype=torch.float32).cuda()
         else:
-            state = torch.tensor(state)
-            next_state = torch.tensor(next_state)
-            action = torch.tensor([action])
-            reward = torch.tensor([reward])
-            done = torch.tensor([done])
+            state = torch.tensor(state, dtype=torch.float32)
+            next_state = torch.tensor(next_state, dtype=torch.float32)
+            action = torch.tensor([action], dtype=torch.float32)
+            reward = torch.tensor([reward], dtype=torch.float32)
+            done = torch.tensor([done], dtype=torch.float32)
 
         self.memory.append((state, next_state, action, reward, done,))
 
@@ -366,7 +366,6 @@ class MetricLogger:
             plt.clf()
 
 use_cuda = torch.cuda.is_available()
-use_cuda = False #temp
 print(f"Using CUDA: {use_cuda}")
 print()
 
