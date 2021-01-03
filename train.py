@@ -98,6 +98,8 @@ class Mario:
         self.memory = deque(maxlen=100000)
         self.batch_size = 32
 
+        self.gamma = 0.9
+
         
     def act(self, state):
         """
@@ -153,6 +155,21 @@ class Mario:
         state, next_state, action, reward, done = map(torch.stack, zip(*batch))
         return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
 
+    def td_estimate(self, action, action):
+        current_Q = self.net(state, model="online")[
+            np.arange(0, self.batch_size), action
+        ]
+        return current_Q
+
+    @torch.no_grad()
+    def td_target(self, reward, next_state, done):
+        next_state_Q = self.net(next_state, model="online")
+        best_action = torch.argmax(next_state_Q, axis=1)
+        next_Q = self.net(next_state, model="target")[
+            np.arange(0, self.batch_size), best_action
+        ]
+        return (reward + (1 - done.float()) * self.gamma * next_Q).float()
+    
     def learn(self):
         """Update online action value (Q) func with a batch of agent exp"""
         pass
