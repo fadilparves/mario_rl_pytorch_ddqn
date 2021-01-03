@@ -78,6 +78,64 @@ env = GrayScaleObservation(env)
 env = ResizeObservation(env, shape=84)
 env = FrameStack(env, num_stack=4)
 
+class Mario:
+    def __init__(self, state_dim, action_dim, save_dir):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.save_dir = save_dir
+        self.use_cuda = torch.cuda.is_available()
+
+        self.net = Net(self.state_dim, self.action_dim).float()
+        if self.use_cuda:
+            self.net = self.net.to(device="cuda")
+
+        self.exploration_rate = 1
+        self.exploration_rate_decay = 0.99999975
+        self.exploration_rate_min = 0.1
+        self.curr_step = 0
+
+        self.save_every = 5e5
+    
+    def act(self, state):
+        """
+        When the agent is in a state, it chooses an action based on epsilon greedy
+        Inputs: state = A single obs of the current state, dim is state_dim
+        Outputs: action_idx(int) = An integer representing which action Mario will perform
+        """
+        #Explore
+        if np.random.rand() < self.exploration_rate:
+            action_idx = np.random.randint(self.action_dim)
+
+        #Exploit
+        else:
+            state = state.__array__()
+            if self.use_cuda:
+                state = torch.tensor(state).cuda()
+            else:
+                state = torch.tensor(state)
+            state = state.unsqueeze(0)
+            action_values = self.net(state, model="online")
+            action_idx = torch.argmax(action_values, axis=1).item()
+
+        # decrease the exploration rate
+        self.exploration_rate *= self.exploration_rate_decay
+        self.explortaion_rate = max(self.exploration_rate_min, self.exploration_rate)
+
+        self.curr_step += 1
+        return action_idx
+
+    def cache(self, experience):
+        """Add the exp to the memory"""
+        pass
+
+    def recall(self):
+        """Sample exp from memory"""
+        pass
+
+    def learn(self):
+        """Update online action value (Q) func with a batch of agent exp"""
+        pass
+
 
 
 
