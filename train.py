@@ -135,7 +135,7 @@ class Mario:
         self.curr_step += 1
         return action_idx
 
-    def cache(self, experience):
+    def cache(self, state, next_state, action, reward, done):
         """Add the exp to the memory"""
         state = state.__array__()
         next_state = next_state.__array__()
@@ -161,7 +161,7 @@ class Mario:
         state, next_state, action, reward, done = map(torch.stack, zip(*batch))
         return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
 
-    def td_estimate(self, action, action):
+    def td_estimate(self, state, action):
         current_Q = self.net(state, model="online")[
             np.arange(0, self.batch_size), action
         ]
@@ -189,7 +189,7 @@ class Mario:
 
     def learn(self):
         """Update online action value (Q) func with a batch of agent exp"""
-        if slef.curr_step % self.sync_every == 0:
+        if self.curr_step % self.sync_every == 0:
             self.sync_Q_target()
 
         if self.curr_step % self.save_every == 0:
@@ -230,7 +230,7 @@ class Mario:
 
         print(f"Loading model at {load_path} with exploration rate {exploration_rate}")
         self.net.load_state_dict(state_dict)
-        self.exploration_rate = exploration rate
+        self.exploration_rate = exploration_rate
 
 class DDQNet(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -319,7 +319,7 @@ class MetricLogger:
 
         self.init_episode()
 
-    def init_episdoe(self):
+    def init_episode(self):
         self.curr_ep_reward = 0.0
         self.curr_ep_length = 0
         self.curr_ep_loss = 0.0
@@ -355,7 +355,7 @@ class MetricLogger:
         with open(self.save_log, "a") as f:
             f.write(
                 f"{episode:8d}{step:8d}{epsilon:10.3f}"
-                f"{mean_ep_rewards:15.3f}{mean_ep_length:15.3f}{mean_ep_loss:15.3f}{mean_ep_q:15.3f}"
+                f"{mean_ep_reward:15.3f}{mean_ep_length:15.3f}{mean_ep_loss:15.3f}{mean_ep_q:15.3f}"
                 f"{time_since_last_record:15.3f}"
                 f"{datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'):>20}\n"
             )
@@ -365,4 +365,31 @@ class MetricLogger:
             plt.savefig(getattr(self, f"{metric}_plot"))
             plt.clf()
 
+use_cuda = torch.cuda.is_available()
+print(f"Using CUDA: {use_cuda}")
+print()
 
+save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+save_dir.mkdir(parents=True)
+
+mario = Mario(state_dim=(4,84,84), action_dim=env.action_space.n, save_dir=save_dir)
+
+logger = MetricLogger(save_dir)
+
+episodes = 10
+for e in range(episodes):
+    state = env.reset()
+    while True:
+        action = mario.act(state)
+        next_state, reward, done, info = env.step(action)
+        mario.cache(state, next_state, action, reward, done)
+        q, loss = mario.learn()
+        logger.log_step(reward, loss, q)
+        state = next_state
+        if done or info["flag_get"]:
+            break
+
+    logger.log_episode()
+
+    if e % 20 == 0:
+        logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
