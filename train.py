@@ -102,6 +102,9 @@ class Mario:
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
         self.loss_fn = torch.nn.SmoothL1Loss()
         
+        self.burnin = 1e4 # min no of exp before training
+        self.learn_every = 3 # no of exp between updates to Q_online
+        self.sync_every = 1e4 # no of exp between Q_target and Q_online sync
 
     def act(self, state):
         """
@@ -185,7 +188,31 @@ class Mario:
 
     def learn(self):
         """Update online action value (Q) func with a batch of agent exp"""
-        pass
+        if slef.curr_step % self.sync_every == 0:
+            self.sync_Q_target()
+
+        if self.curr_step % self.save_every == 0:
+            self.save()
+
+        if self.curr_step < self.burnin:
+            return None, None
+
+        if self.curr_step % self.learn_every != 0:
+            return None, None
+
+        # Take a sample from the memory
+        state, next_state, action, reward, done = self.recall()
+
+        # Get TD Estimate
+        td_est = self.td_estimate(state, action)
+
+        # Get TD Target
+        td_tgt = self.td_target(reward, next_state, done)
+
+        # BackP loss through Q_online
+        loss = self.update_Q_online(td_est, td_tgt)
+
+        return (td_est.mean().item(), loss)
 
     def save(self):
         save_path = (self.save_dir / f"mario_net_{int(self.curr_step // self.save_every)}.chkpt")
