@@ -295,35 +295,74 @@ class MetricLogger:
         self.init_episode()
 
         self.record_time = time.time()
+    
+    def log_step(self, reward, loss, q):
+        self.curr_ep_reward += reward
+        self.curr_ep_length += 1
+        if loss:
+            self.curr_ep_loss += loss
+            self.curr_ep_q += q
+            self.curr_ep_loss_length += 1
+            
+    def log_episode(self):
+        self.ep_rewards.append(self.curr_ep_reward)
+        self.ep_lengths.append(self.curr_ep_length)
+        if self.curr_ep_loss_length == 0:
+            ep_avg_loss = 0
+            ep_avg_q = 0
+        else:
+            ep_avg_loss = np.round(self.curr_ep_loss / self.curr_ep_loss_length, 5)
+            ep_avg_q = np.round(self.curr_ep_q / self.curr_ep_loss_length, 5)
 
-        def log_step(self, reward, loss, q):
-            self.curr_ep_reward += reward
-            self.curr_ep_length += 1
-            if loss:
-                self.curr_ep_loss += loss
-                self.curr_ep_q += q
-                self.curr_ep_loss_length += 1
+        self.ep_avg_losses.append(ep_avg_loss)
+        self.ep_avg_qs.append(ep_avg_q)
 
-        def log_episode(self):
-            self.ep_rewards.append(self.curr_ep_reward)
-            self.ep_lengths.append(self.curr_ep_length)
-            if self.curr_ep_loss_length == 0:
-                ep_avg_loss = 0
-                ep_avg_q = 0
-            else:
-                ep_avg_loss = np.round(self.curr_ep_loss / self.curr_ep_loss_length, 5)
-                ep_avg_q = np.round(self.curr_ep_q / self.curr_ep_loss_length, 5)
+        self.init_episode()
 
-            self.ep_avg_losses.append(ep_avg_loss)
-            self.ep_avg_qs.append(ep_avg_q)
+    def init_episdoe(self):
+        self.curr_ep_reward = 0.0
+        self.curr_ep_length = 0
+        self.curr_ep_loss = 0.0
+        self.curr_ep_q = 0.0
+        self.curr_ep_loss_length = 0
 
-            self.init_episode()
+    def record(self, episode, epsilon, step):
+        mean_ep_reward = np.round(np.mean(self.ep_rewards[-100:]),3)
+        mean_ep_length = np.round(np.mean(self.ep_lengths[-100:]),3)
+        mean_ep_loss = np.round(np.mean(self.ep_avg_losses[-100:]),3)
+        mean_ep_q = np.round(np.mean(self.ep_avg_qs[-100:]),3)
+        self.moving_avg_ep_rewards.append(mean_ep_reward)
+        self.moving_avg_ep_lengths.append(mean_ep_length)
+        self.moving_avg_ep_avg_losses.append(mean_ep_loss)
+        self.moving_avg_ep_avg_qs.append(mean_ep_q)
 
-        def init_episdoe(self):
-            self.curr_ep_reward = 0.0
-            self.curr_ep_length = 0
-            self.curr_ep_loss = 0.0
-            self.curr_ep_q = 0.0
-            self.curr_ep_loss_length = 0
+        last_record_time = self.record_time
+        self.record_time = time.time()
+        time_since_last_record = np.round(self.record_time - last_record_time, 3)
+
+        print(
+            f"Episode {episode} - "
+            f"Step {step} - "
+            f"Epsilon {epsilon} - "
+            f"Mean Reward {mean_ep_reward} - "
+            f"Mean Length {mean_ep_length} - "
+            f"Mean Loss {mean_ep_loss} - "
+            f"Mean Q Value {mean_ep_q} - "
+            f"Time Delta {time_since_last_record} - "
+            f"Time {datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')}"
+        )
+
+        with open(self.save_log, "a") as f:
+            f.write(
+                f"{episode:8d}{step:8d}{epsilon:10.3f}"
+                f"{mean_ep_rewards:15.3f}{mean_ep_length:15.3f}{mean_ep_loss:15.3f}{mean_ep_q:15.3f}"
+                f"{time_since_last_record:15.3f}"
+                f"{datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'):>20}\n"
+            )
+
+        for metric in ["ep_rewards", "ep_lengths", "ep_avg_losses", "ep_avg_qs"]:
+            plt.plot(getattr(self, f"moving_avg_{metric}"))
+            plt.savefig(getattr(self, f"{metric}_plot"))
+            plt.clf()
 
 
