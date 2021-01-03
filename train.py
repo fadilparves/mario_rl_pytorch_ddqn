@@ -73,7 +73,10 @@ class ResizeObservation(gym.ObservationWrapper):
         observation = transforms(observation).squeeze(0)
         return observation
 
-
+env = SkipFrame(env, skip=4)
+env = GrayScaleObservation(env)
+env = ResizeObservation(env, shape=84)
+env = FrameStack(env, num_stack=4)
 
 
 
