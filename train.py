@@ -187,6 +187,23 @@ class Mario:
         """Update online action value (Q) func with a batch of agent exp"""
         pass
 
+    def save(self):
+        save_path = (self.save_dir / f"mario_net_{int(self.curr_step // self.save_every)}.chkpt")
+        torch.save(dict(model=self.net.state_dict(), exploration_rate=self.exploration_rate), save_path,)
+        print(f"MarioNet saved to {save_path} at step {self.curr_step}")
+
+    def load(self, load_path):
+        if not load_path.exists():
+            raise ValueError(f"{load_path} does not exist")
+
+        ckp = torch.load(load_path, map_location=('cuda' if self.use_cuda else 'cpu'))
+        exploration_rate = ckp.get('exploration_rate')
+        state_dict = ckp.get('model')
+
+        print(f"Loading model at {load_path} with exploration rate {exploration_rate}")
+        self.net.load_state_dict(state_dict)
+        self.exploration_rate = exploration rate
+
 class DDQNet(nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
