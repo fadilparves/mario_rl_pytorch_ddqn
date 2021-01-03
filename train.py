@@ -376,7 +376,7 @@ mario = Mario(state_dim=(4,84,84), action_dim=env.action_space.n, save_dir=save_
 
 logger = MetricLogger(save_dir)
 
-episodes = 10
+episodes = 40000
 for e in range(episodes):
     state = env.reset()
     while True:
