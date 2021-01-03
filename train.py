@@ -95,7 +95,10 @@ class Mario:
         self.curr_step = 0
 
         self.save_every = 5e5
-    
+        self.memory = deque(maxlen=100000)
+        self.batch_size = 32
+
+        
     def act(self, state):
         """
         When the agent is in a state, it chooses an action based on epsilon greedy
@@ -126,11 +129,29 @@ class Mario:
 
     def cache(self, experience):
         """Add the exp to the memory"""
-        pass
+        state = state.__array__()
+        next_state = next_state.__array__()
+
+        if self.use_cuda:
+            state = torch.tensor(state).cuda()
+            next_state = torch.tensor(next_state).cuda()
+            action = torch.tensor([action]).cuda()
+            reward = torch.tensor([reward]).cuda()
+            done = torch.tensor([done]).cuda()
+        else:
+            state = torch.tensor(state)
+            next_state = torch.tensor(next_state)
+            action = torch.tensor([action])
+            reward = torch.tensor([reward])
+            done = torch.tensor([done])
+
+        self.memory.append((state, next_state, action, reward, done,))
 
     def recall(self):
         """Sample exp from memory"""
-        pass
+        batch = random.sample(self.memory, self.batch_size)
+        state, next_state, action, reward, done = map(torch.stack, zip(*batch))
+        return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
 
     def learn(self):
         """Update online action value (Q) func with a batch of agent exp"""
