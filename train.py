@@ -84,8 +84,8 @@ class Mario:
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.save_dir = save_dir
-        self.use_cuda = torch.cuda.is_available()
-
+        self.use_cuda = False  #torch.cuda.is_available()
+        
         self.net = DDQNet(self.state_dim, self.action_dim).float()
         if self.use_cuda:
             self.net = self.net.to(device="cuda")
@@ -366,6 +366,7 @@ class MetricLogger:
             plt.clf()
 
 use_cuda = torch.cuda.is_available()
+use_cuda = False #temp
 print(f"Using CUDA: {use_cuda}")
 print()
 
