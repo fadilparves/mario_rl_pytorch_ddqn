@@ -5,12 +5,13 @@ from PIL import Image
 import numpy as np
 from pathlib import Path
 from collections import deque
-import random, datetime, os, copy
+import random, datetime, os, copy, time
 import gym
 from gym.spaces import Box
 from gym.wrappers import FrameStack
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
+import matplotlib.pyplot as plt
 
 env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
 env = JoypadSpace(env, [['right'], ['right', 'A']])
@@ -266,5 +267,63 @@ class DDQNet(nn.Module):
         elif model == "target":
             return self.target(input)
 
+
+class MetricLogger:
+    def __init__(self, save_dir):
+        self.save_log = save_dir / "log"
+        with open(self.save_log, "w") as f:
+            f.write(
+                f"{'Episode':>8}{'Step':>8}{'Epsilon':>10}{'MeanReward':>15}"
+                f"{'MeanLength':>15}{'MeanLoss':>15}{'MeanQValue':15}"
+                f"{'TimeDelta':>15}{'Time':>20}\n"
+            )
+        self.ep_rewards_plot = save_dir / "reward_plot.jpg"
+        self.ep_lengths_plot = save_dir / "length_plot.jpg"
+        self.ep_avg_losses_plot = save_dir / "loss_plot.jpg"
+        self.ep_avg_qs_plot = save_dir / "q_plot.jpg"
+
+        self.ep_rewards = []
+        self.ep_lengths = []
+        self.ep_avg_losses = []
+        self.ep_avg_qs = []
+
+        self.moving_avg_ep_rewards = []
+        self.moving_avg_ep_lengths = []
+        self.moving_avg_ep_avg_losses = []
+        self.moving_avg_ep_avg_qs = []
+
+        self.init_episode()
+
+        self.record_time = time.time()
+
+        def log_step(self, reward, loss, q):
+            self.curr_ep_reward += reward
+            self.curr_ep_length += 1
+            if loss:
+                self.curr_ep_loss += loss
+                self.curr_ep_q += q
+                self.curr_ep_loss_length += 1
+
+        def log_episode(self):
+            self.ep_rewards.append(self.curr_ep_reward)
+            self.ep_lengths.append(self.curr_ep_length)
+            if self.curr_ep_loss_length == 0:
+                ep_avg_loss = 0
+                ep_avg_q = 0
+            else:
+                ep_avg_loss = np.round(self.curr_ep_loss / self.curr_ep_loss_length, 5)
+                ep_avg_q = np.round(self.curr_ep_q / self.curr_ep_loss_length, 5)
+
+            self.ep_avg_losses.append(ep_avg_loss)
+            self.ep_avg_qs.append(ep_avg_q)
+
+            self.init_episode()
+
+        def init_episdoe(self):
+            self.curr_ep_reward = 0.0
+            self.curr_ep_length = 0
+            self.curr_ep_loss = 0.0
+            self.curr_ep_q = 0.0
+            self.curr_ep_loss_length = 0
 
 
