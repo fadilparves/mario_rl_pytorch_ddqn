@@ -84,7 +84,7 @@ class Mario:
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.save_dir = save_dir
-        self.use_cuda = False  #torch.cuda.is_available()
+        self.use_cuda = torch.cuda.is_available()
         
         self.net = DDQNet(self.state_dim, self.action_dim).float()
         if self.use_cuda:
@@ -96,7 +96,7 @@ class Mario:
         self.curr_step = 0
 
         self.save_every = 5e5
-        self.memory = deque(maxlen=100000)
+        self.memory = deque(maxlen=5000)
         self.batch_size = 32
 
         self.gamma = 0.9
