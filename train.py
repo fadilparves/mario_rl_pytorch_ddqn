@@ -36,7 +36,7 @@ class SkipFrame(gym.Wrapper):
             total_reward += reward
             if done:
                 break
-        
+
         return obs, total_reward, done, info
 
 class GrayScaleObservation(gym.ObservationWrapper):
@@ -53,7 +53,11 @@ class GrayScaleObservation(gym.ObservationWrapper):
     def observation(self, observation):
         observation = self.permute_orientation(observation)
         transform = T.Grayscale()
+        torch_to_pil = T.ToPILImage()
+        pil_to_torch = T.ToTensor()
+        observation = torch_to_pil(observation)
         observation = transform(observation)
+        observation = pil_to_torch(observation)
         return observation
 
 class ResizeObservation(gym.ObservationWrapper):
@@ -69,7 +73,7 @@ class ResizeObservation(gym.ObservationWrapper):
 
     def observation(self, observation):
         transforms = T.Compose(
-            [T.Resize(self.shape), T.Normalize(0,255)]
+            [T.ToPILImage(), T.Resize(self.shape), T.ToTensor(), T.Normalize((0,),(255,))]
         )
         observation = transforms(observation).squeeze(0)
         return observation
@@ -85,7 +89,6 @@ class Mario:
         self.action_dim = action_dim
         self.save_dir = save_dir
         self.use_cuda = torch.cuda.is_available()
-        
         self.net = DDQNet(self.state_dim, self.action_dim).float()
         if self.use_cuda:
             self.net = self.net.to(device="cuda")
@@ -102,7 +105,7 @@ class Mario:
         self.gamma = 0.9
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
         self.loss_fn = torch.nn.SmoothL1Loss()
-        
+
         self.burnin = 1e4 # min no of exp before training
         self.learn_every = 3 # no of exp between updates to Q_online
         self.sync_every = 1e4 # no of exp between Q_target and Q_online sync
@@ -162,8 +165,9 @@ class Mario:
         return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
 
     def td_estimate(self, state, action):
+
         current_Q = self.net(state, model="online")[
-            np.arange(0, self.batch_size), action
+            np.arange(0, self.batch_size), action.long()
         ]
         return current_Q
 
@@ -172,10 +176,10 @@ class Mario:
         next_state_Q = self.net(next_state, model="online")
         best_action = torch.argmax(next_state_Q, axis=1)
         next_Q = self.net(next_state, model="target")[
-            np.arange(0, self.batch_size), best_action
+            np.arange(0, self.batch_size), best_action.long()
         ]
         return (reward + (1 - done.float()) * self.gamma * next_Q).float()
-    
+
     def update_Q_online(self, td_estimate, td_target):
         loss = self.loss_fn(td_estimate, td_target)
         self.optimizer.zero_grad()
@@ -236,7 +240,7 @@ class DDQNet(nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
         c,h,w = input_dim
-        
+
         if h != 84:
             raise ValueError(f"Expecting input height: 84, got: {h}")
         if w != 84:
@@ -295,7 +299,7 @@ class MetricLogger:
         self.init_episode()
 
         self.record_time = time.time()
-    
+
     def log_step(self, reward, loss, q):
         self.curr_ep_reward += reward
         self.curr_ep_length += 1
@@ -303,7 +307,7 @@ class MetricLogger:
             self.curr_ep_loss += loss
             self.curr_ep_q += q
             self.curr_ep_loss_length += 1
-            
+
     def log_episode(self):
         self.ep_rewards.append(self.curr_ep_reward)
         self.ep_lengths.append(self.curr_ep_length)
