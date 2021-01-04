@@ -1,0 +1,8 @@
+gym
+gym-super-mario-bros
+matplotlib
+nes-py
+numpy
+pillow
+torch
+torchvision
