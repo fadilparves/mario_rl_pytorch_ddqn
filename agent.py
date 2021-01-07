@@ -6,7 +6,7 @@ from neural import DDQNet
 from collections import deque
 
 class Mario:
-    def __init__(self, state_dim, action_dim, save_dir):
+    def __init__(self, state_dim, action_dim, save_dir, checkpoint=None):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.save_dir = save_dir

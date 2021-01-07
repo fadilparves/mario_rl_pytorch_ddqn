@@ -1,7 +1,7 @@
 import gym
 import torch
 import random, datetime, numpy as np
-from skimage import transform
+from torchvision import transforms as T
 
 from gym.spaces import Box
 
