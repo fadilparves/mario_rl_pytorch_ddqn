@@ -37,3 +37,31 @@ logger = MetricLogger(save_dir)
 
 episodes = 100
 
+for e in range(episodes):
+    state = env.reset()
+
+    while True:
+
+        env.render()
+
+        action = mario.act(state)
+
+        next_state, reward, done, info = env.step(action)
+
+        mario.cache(state, next_state, action, reward, done)
+
+        logger.log_step(reward, None, None)
+        
+        state = next_state
+
+        if done or info['flag_get']:
+            break
+    
+    logger.log_episode()
+
+    if e % 20 == 0:
+        logger.record(
+            episode=e,
+            epsilon=mario.exploration_rate,
+            step=mario.curr_step
+        )
