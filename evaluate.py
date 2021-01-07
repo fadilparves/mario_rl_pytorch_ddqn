@@ -23,3 +23,17 @@ env = GrayScaleObservation(env, keep_dim=False)
 env = ResizeObservation(env, shape=84)
 env = TransformObservation(env, f=lambda x: x / 255.)
 env = FrameStack(env, num_stack=4)
+
+env.reset()
+
+save_dir = Path('checkpoints_evaluate') / datetime.datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
+save_dir.mkdir(parents=True)
+
+checkpoint = Path('mario_net.chkpt')
+mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=save_dir, checkpoint=checkpoint)
+mario.exploration_rate = mario.exploration_rate_min
+
+logger = MetricLogger(save_dir)
+
+episodes = 100
+
