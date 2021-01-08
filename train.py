@@ -109,7 +109,6 @@ class Mario:
         self.burnin = 1e4 # min no of exp before training
         self.learn_every = 3 # no of exp between updates to Q_online
         self.sync_every = 1e4 # no of exp between Q_target and Q_online sync
-        self.lowest_loss = 0
 
     def act(self, state):
         """
@@ -383,7 +382,9 @@ mario = Mario(state_dim=(4,84,84), action_dim=env.action_space.n, save_dir=save_
 logger = MetricLogger(save_dir)
 
 episodes = 50000
+best_reward = 0
 for e in range(episodes):
+    reward_arr = []
     state = env.reset()
     while True:
         action = mario.act(state)
@@ -392,10 +393,24 @@ for e in range(episodes):
         q, loss = mario.learn()
         logger.log_step(reward, loss, q)
         state = next_state
+        reward_arr.append(reward)
         if done or info["flag_get"]:
             break
 
-    logger.log_episode()
+    reward_arr = np.array(reward_arr)
+    reward_sum_per_e = np.round(np.sum(reward_arr),3)
+    # logger.log_episode()
+    print(
+            f"Episode {e} - "
+            f"Step {mario.curr_step} - "
+            f"Epsilon {mario.exploration_rate} - "
+            f"Mean Reward {reward_sum_per_e} "
+    )
 
-    if e % 20 == 0:
-        logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
+    if reward_sum_per_e > best_reward:
+        mario.save()
+        best_reward = reward_sum_per_e
+
+
+    # if e % 20 == 0:
+    #     logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
