@@ -383,6 +383,7 @@ logger = MetricLogger(save_dir)
 
 episodes = 50000
 best_reward = 0
+rewards_per_100 = []
 for e in range(episodes):
     reward_arr = []
     state = env.reset()
@@ -400,16 +401,21 @@ for e in range(episodes):
     reward_arr = np.array(reward_arr)
     reward_sum_per_e = np.round(np.sum(reward_arr),3)
     # logger.log_episode()
-    print(
-            f"Episode {e} - "
-            f"Step {mario.curr_step} - "
-            f"Epsilon {mario.exploration_rate} - "
-            f"Mean Reward {reward_sum_per_e} "
-    )
+    rewards_per_100.append(reward_sum_per_e)
 
-    if reward_sum_per_e > best_reward:
-        mario.save()
-        best_reward = reward_sum_per_e
+    if e % 100 == 0:
+        reward_mean_per_100 = np.round(np.mean(rewards_per_100),3)
+        print(
+                f"Episode {e} - "
+                f"Step {mario.curr_step} - "
+                f"Epsilon {mario.exploration_rate} - "
+                f"Mean Reward {reward_mean_per_100} "
+        )
+        rewards_per_100 = []
+
+        if reward_mean_per_100 > best_reward:
+            mario.save()
+            best_reward = reward_mean_per_100
 
 
     # if e % 20 == 0:
