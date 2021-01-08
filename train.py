@@ -109,6 +109,7 @@ class Mario:
         self.burnin = 1e4 # min no of exp before training
         self.learn_every = 3 # no of exp between updates to Q_online
         self.sync_every = 1e4 # no of exp between Q_target and Q_online sync
+        self.lowest_loss = 0
 
     def act(self, state):
         """
@@ -196,9 +197,6 @@ class Mario:
         if self.curr_step % self.sync_every == 0:
             self.sync_Q_target()
 
-        if self.curr_step % self.save_every == 0:
-            self.save()
-
         if self.curr_step < self.burnin:
             return None, None
 
@@ -216,6 +214,10 @@ class Mario:
 
         # BackP loss through Q_online
         loss = self.update_Q_online(td_est, td_tgt)
+
+        # if loss < self.lowest_loss:
+        #     self.save()
+        #     self.lowest_loss = loss
 
         return (td_est.mean().item(), loss)
 
@@ -380,7 +382,7 @@ mario = Mario(state_dim=(4,84,84), action_dim=env.action_space.n, save_dir=save_
 
 logger = MetricLogger(save_dir)
 
-episodes = 60000
+episodes = 50000
 for e in range(episodes):
     state = env.reset()
     while True:

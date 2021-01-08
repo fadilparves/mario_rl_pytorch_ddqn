@@ -11,10 +11,7 @@ class Mario:
         self.action_dim = action_dim
         self.save_dir = save_dir
         self.use_cuda = torch.cuda.is_available()
-        self.net = DDQNet(self.state_dim, self.action_dim).float()
-        if self.use_cuda:
-            self.net = self.net.to(device="cuda")
-
+        
         self.exploration_rate = 1
         self.exploration_rate_decay = 0.99999975
         self.exploration_rate_min = 0.1
@@ -25,13 +22,20 @@ class Mario:
         self.batch_size = 32
 
         self.gamma = 0.9
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
-        self.loss_fn = torch.nn.SmoothL1Loss()
 
         self.burnin = 1e4 # min no of exp before training
         self.learn_every = 3 # no of exp between updates to Q_online
         self.sync_every = 1e4 # no of exp between Q_target and Q_online sync
 
+        self.net = DDQNet(self.state_dim, self.action_dim).float()
+        if self.use_cuda:
+            self.net = self.net.to(device="cuda")
+        if checkpoint:
+            self.load(checkpoint)
+
+        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.00025)
+        self.loss_fn = torch.nn.SmoothL1Loss()
+    
     def act(self, state):
         """
         When the agent is in a state, it chooses an action based on epsilon greedy
