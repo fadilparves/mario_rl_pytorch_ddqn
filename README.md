@@ -1,1 +1,1 @@
-# mario_rl_pytorch_ddqn
+DDQN Mario Agent
