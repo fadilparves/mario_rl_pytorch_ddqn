@@ -196,9 +196,6 @@ class Mario:
         if self.curr_step % self.sync_every == 0:
             self.sync_Q_target()
 
-        if self.curr_step % self.save_every == 0:
-            self.save()
-
         if self.curr_step < self.burnin:
             return None, None
 
@@ -216,6 +213,10 @@ class Mario:
 
         # BackP loss through Q_online
         loss = self.update_Q_online(td_est, td_tgt)
+
+        # if loss < self.lowest_loss:
+        #     self.save()
+        #     self.lowest_loss = loss
 
         return (td_est.mean().item(), loss)
 
@@ -380,8 +381,11 @@ mario = Mario(state_dim=(4,84,84), action_dim=env.action_space.n, save_dir=save_
 
 logger = MetricLogger(save_dir)
 
-episodes = 60000
+episodes = 50000
+best_reward = 0
+rewards_per_100 = []
 for e in range(episodes):
+    reward_arr = []
     state = env.reset()
     while True:
         action = mario.act(state)
@@ -390,10 +394,29 @@ for e in range(episodes):
         q, loss = mario.learn()
         logger.log_step(reward, loss, q)
         state = next_state
+        reward_arr.append(reward)
         if done or info["flag_get"]:
             break
 
-    logger.log_episode()
+    reward_arr = np.array(reward_arr)
+    reward_sum_per_e = np.round(np.sum(reward_arr),3)
+    # logger.log_episode()
+    rewards_per_100.append(reward_sum_per_e)
 
-    if e % 20 == 0:
-        logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
+    if e % 100 == 0:
+        reward_mean_per_100 = np.round(np.mean(rewards_per_100),3)
+        print(
+                f"Episode {e} - "
+                f"Step {mario.curr_step} - "
+                f"Epsilon {mario.exploration_rate} - "
+                f"Mean Reward {reward_mean_per_100} "
+        )
+        rewards_per_100 = []
+
+        if reward_mean_per_100 > best_reward:
+            mario.save()
+            best_reward = reward_mean_per_100
+
+
+    # if e % 20 == 0:
+    #     logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
